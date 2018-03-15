@@ -1,0 +1,9 @@
+{
+  "container_name": "flaki-service-1",
+  "service_name": "flaki",
+  "jaeger_agent_name": "agent",
+  "flaki_timeout": 40,
+  "agent_timeout": 30,
+  "monit_timeout": 10,
+  "ports": ["5555", "8888"]
+}
