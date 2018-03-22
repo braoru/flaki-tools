@@ -11,10 +11,12 @@ import time
 import calendar
 import datetime
 import json
+import http.client
 
 import dateutil.parser
 
 from sh import docker
+
 
 # logging
 logging.basicConfig(
@@ -22,7 +24,7 @@ logging.basicConfig(
            '(name)s %(levelname)s %(message)s',
     datefmt='%m/%d/%Y %I:%M:%S %p'
 )
-logger = logging.getLogger("influx_tools.tests.test_influx_container")
+logger = logging.getLogger("influx_tools.tests.test_flaki_container")
 logger.setLevel(logging.INFO)
 
 
@@ -455,3 +457,20 @@ class TestContainerFlaki():
 
         status = re.search(restart_status, monit_restart)
         assert status is not None
+
+    def test_flaki_health_checks(self, settings):
+        """
+        Flaki service offers the possibility to do health checks on the services that work with it. This test launches the
+        health checks and sees that all services are OK:
+        :param settings: settings of the container, e.g. container name, service name, etc.
+        :return:
+        """
+        # HTTP request for health check
+        url = settings["http_addr"]
+        services = settings["health_check"]
+        conn = http.client.HTTPConnection(url)
+        conn.request("GET", "/health")
+        resp = json.load(conn.getresponse())
+
+        for service in services:
+            assert resp[service] == "OK"

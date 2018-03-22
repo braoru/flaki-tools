@@ -5,5 +5,8 @@
   "flaki_timeout": 40,
   "agent_timeout": 30,
   "monit_timeout": 10,
-  "ports": ["5555", "8888"]
+  "ports": ["5555", "8888"],
+  "health_check": ["jaeger", "sentry", "redis", "influx"],
+  "http_addr": "127.0.0.1:8888",
+  "grpc_addr": "127.0.0.1:5555"
 }
