@@ -8,9 +8,7 @@ import re
 import pytest
 import logging
 import time
-import json
 
-import http.client
 import dateutil.parser
 
 from sh import docker
@@ -50,9 +48,10 @@ class TestContainerFlaki():
         logger.debug(check_service)
 
         # check the return value
-        influxdb_status = check_service().stdout.decode("utf-8")
+        flaki_status = check_service().stdout.decode("utf-8")
+        logger.debug(flaki_status)
 
-        status = re.search(active_status, influxdb_status)
+        status = re.search(active_status, flaki_status)
         assert status is not None
 
     def test_systemd_running_monit(self, settings):
@@ -74,6 +73,7 @@ class TestContainerFlaki():
 
         # check the return value
         monit_status = check_service().stdout.decode("utf-8")
+        logger.debug(monit_status)
 
         status = re.search(active_status, monit_status)
         assert status is not None
@@ -97,6 +97,7 @@ class TestContainerFlaki():
 
         # check the return value
         agent_status = check_service().stdout.decode("utf-8")
+        logger.debug(agent_status)
 
         status = re.search(active_status, agent_status)
         assert status is not None
@@ -140,6 +141,7 @@ class TestContainerFlaki():
         while (tic_tac < max_timeout) and (flaki_is_up == False):
             # check if monit started flaki
             time.sleep(1)
+
             check_service = docker.bake("exec", "-i", container_name, "systemctl", "status", service_name)
             logger.info(
                 "Check to see if {service} started after {time} seconds".format(service=service_name, time=tic_tac))
@@ -153,6 +155,7 @@ class TestContainerFlaki():
 
             except Exception as e:
                 tic_tac = tic_tac + 1
+
         assert flaki_is_up == True
 
     def test_monit_restarts_stopped_agent(self, settings):
@@ -177,6 +180,7 @@ class TestContainerFlaki():
         while (tic_tac < max_timeout) and (agent_is_up == False):
             # check if monit started jaeger agent
             time.sleep(1)
+
             check_service = docker.bake("exec", "-i", container_name, "systemctl", "status", service_name)
             logger.info(
                 "Check to see if {service} started after {time} seconds".format(service=service_name, time=tic_tac))
@@ -190,6 +194,7 @@ class TestContainerFlaki():
 
             except Exception as e:
                 tic_tac = tic_tac + 1
+
         assert agent_is_up == True
 
     def test_monit_restarts_killed_flaki(self, settings):
@@ -214,6 +219,7 @@ class TestContainerFlaki():
         while (tic_tac < max_timeout) and (flaki_is_up == False):
             # check if monit started flaki
             time.sleep(1)
+
             check_service = docker.bake("exec", "-i", container_name, "systemctl", "status", service_name)
             logger.info(
                 "Check to see if {service} started after {time} seconds".format(service=service_name, time=tic_tac))
@@ -227,6 +233,7 @@ class TestContainerFlaki():
 
             except Exception as e:
                 tic_tac = tic_tac + 1
+
         assert flaki_is_up == True
 
     def test_monit_restarts_killed_agent(self, settings):
@@ -251,6 +258,7 @@ class TestContainerFlaki():
         while (tic_tac < max_timeout) and (agent_is_up == False):
             # check if monit started jaeger agent
             time.sleep(1)
+
             check_service = docker.bake("exec", "-i", container_name, "systemctl", "status", service_name)
             logger.info(
                 "Check to see if {service} started after {time} seconds".format(service=service_name, time=tic_tac))
@@ -264,6 +272,7 @@ class TestContainerFlaki():
 
             except Exception as e:
                 tic_tac = tic_tac + 1
+
         assert agent_is_up == True
 
     def test_no_error_monit_log(self, settings):
@@ -285,18 +294,24 @@ class TestContainerFlaki():
         restart_docker = docker.bake("start", container_name)
         logger.debug(restart_docker)
         restart_docker()
+
         time.sleep(2)
 
         # docker inspect --format='{{.State.Status}} container
         check_status = docker.bake("inspect", "--format='{{.State.StartedAt}}'", container_name)
         logger.debug(check_status)
+
         last_started_date = dateutil.parser.parse(check_status().stdout.rstrip()).replace(tzinfo=None)
+        logger.debug(last_started_date)
 
         # check in journalctl if there are any errors since the container last started
         get_monit_log = docker.bake("exec", container_name, "journalctl", "-u", "monit", "--since", last_started_date,
                                     "-p", "err", "-b")
         logger.debug(get_monit_log)
+
         monit_log = get_monit_log().stdout.decode("utf-8")
+        logger.debug(monit_log)
+
         assert re.search(no_error_status, monit_log) is not None
 
     def test_systemd_restarts_monit(self, settings):
@@ -321,6 +336,7 @@ class TestContainerFlaki():
         while (tic_tac < max_timeout) and (monit_is_up == False):
             # check if systemd starts monit
             time.sleep(1)
+
             check_service = docker.bake("exec", "-i", container_name, "systemctl", "status", service_name)
             logger.info(
                 "Check to see if {service} started after {time} seconds".format(service=service_name, time=tic_tac))
@@ -334,6 +350,7 @@ class TestContainerFlaki():
 
             except Exception as e:
                 tic_tac = tic_tac + 1
+
         assert monit_is_up == True
 
     def test_container_exposed_ports(self, settings):
@@ -348,7 +365,9 @@ class TestContainerFlaki():
 
         check_ports = docker.bake("inspect", "--format='{{.Config.ExposedPorts}}'", container_name)
         logger.debug(check_ports)
+
         exposed_ports = check_ports().stdout.decode("utf-8")
+        logger.debug(exposed_ports)
 
         for port in ports:
             assert re.search(port, exposed_ports) is not None
@@ -365,7 +384,10 @@ class TestContainerFlaki():
 
         check_monit_restart = docker.bake("exec", "-i", container_name, "systemctl", "cat", service_name)
         logger.debug(check_monit_restart)
+
         monit_restart = check_monit_restart().stdout.decode("utf-8")
+        logger.debug(monit_restart)
+
         assert re.search(restart_status, monit_restart) is not None
 
     def test_monit_always_restarts(self, settings):
@@ -387,6 +409,7 @@ class TestContainerFlaki():
 
         # check the return value
         monit_restart = check_monit_restart().stdout.decode("utf-8")
+        logger.debug(monit_restart)
 
         status = re.search(restart_status, monit_restart)
         assert status is not None
