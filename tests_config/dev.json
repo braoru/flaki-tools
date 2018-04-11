@@ -1,5 +1,5 @@
 {
-  "container_name": "flaki-service-1",
+  "container_name": "flaki",
   "service_name": "flaki",
   "jaeger_agent_name": "agent",
   "flaki_timeout": 40,
@@ -8,5 +8,11 @@
   "ports": ["5555", "8888"],
   "health_check": ["jaeger", "sentry", "redis", "influx"],
   "http_addr": "127.0.0.1:8888",
-  "grpc_addr": "127.0.0.1:5555"
+  "grpc_addr": "127.0.0.1:5555",
+  "flaki":{
+    "ip": "192.168.190.136",
+    "port": "8888",
+    "http_scheme": "http",
+    "component_name": "flaki-service"
+  }
 }

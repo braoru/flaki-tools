@@ -8,11 +8,9 @@ import re
 import pytest
 import logging
 import time
-import calendar
-import datetime
 import json
-import http.client
 
+import http.client
 import dateutil.parser
 
 from sh import docker
@@ -36,7 +34,7 @@ class TestContainerFlaki():
 
     def test_systemd_running_flaki(self, settings):
         """
-        Test to check if systemd is running influxdb.
+        Test to check if systemd is running flaki.
         :param settings: settings of the container, e.g. container name, service name, etc.
         :return:
         """
@@ -98,76 +96,10 @@ class TestContainerFlaki():
         logger.debug(check_service)
 
         # check the return value
-        nginx_status = check_service().stdout.decode("utf-8")
+        agent_status = check_service().stdout.decode("utf-8")
 
-        status = re.search(active_status, nginx_status)
+        status = re.search(active_status, agent_status)
         assert status is not None
-
-    def test_systemd_running_flaki2(self, settings):
-        """
-        Test to check if systemd is running flaki.
-        :param settings: settings of the container, e.g. container name, service name, etc.
-        :return:
-        """
-
-        container_name = settings['container_name']
-        service_name = settings['service_name']
-
-        # docker exec -it busctl get-property
-        check_service = docker.bake("exec", "-i", container_name, "systemctl", "status", service_name)
-        logger.debug(check_service)
-
-        # check the return value
-        try:
-            influxdb_status = check_service().exit_code
-            assert influxdb_status == 0
-        except Exception as e:
-            pytest.fail("Exit code of systemctl is not 0; influxdb is not active")
-            logger.error(e)
-
-    def test_systemd_running_monit2(self, settings):
-        """
-        Test to check if systemd is running monit.
-        :param settings: settings of the container, e.g. container name, service name, etc.
-        :return:
-        """
-
-        container_name = settings['container_name']
-        service_name = "monit"
-
-        # docker exec -it busctl get-property
-        check_service = docker.bake("exec", "-i", container_name, "systemctl", "status", service_name)
-        logger.debug(check_service)
-
-        # check the return value
-        try:
-            monit_status = check_service().exit_code
-            assert monit_status == 0
-        except Exception as e:
-            pytest.fail("Exit code of systemctl is not 0; monit is not active")
-            logger.error(e)
-
-    def test_systemd_running_agent2(self, settings):
-        """
-        Test to check if systemd is running jaeger agent.
-        :param settings: settings of the container, e.g. container name, service name, etc.
-        :return:
-        """
-
-        container_name = settings['container_name']
-        service_name = settings['jaeger_agent_name']
-
-        # docker exec -it busctl get-property
-        check_service = docker.bake("exec", "-i", container_name, "systemctl", "status", service_name)
-        logger.debug(check_service)
-
-        # check the return value
-        try:
-            nginx_status = check_service().exit_code
-            assert nginx_status == 0
-        except Exception as e:
-            pytest.fail("Exit code of systemctl is not 0; monit is not active")
-            logger.error(e)
 
     def test_container_running(self, settings):
         """
@@ -185,6 +117,7 @@ class TestContainerFlaki():
 
         status = re.search(running_status, check_status().stdout.decode("utf-8"))
         assert status is not None
+
     def test_monit_restarts_stopped_flaki(self, settings):
         """
         Test to check if monit restarts a stopped flaki.
@@ -196,7 +129,7 @@ class TestContainerFlaki():
         service_name = settings['service_name']
         max_timeout = settings['flaki_timeout']
 
-        # stop influxdb
+        # stop flaki
         stop_service = docker.bake("exec", "-i", container_name, "systemctl", "stop", service_name)
         logger.debug(stop_service)
         stop_service()
@@ -233,7 +166,7 @@ class TestContainerFlaki():
         service_name = settings['jaeger_agent_name']
         max_timeout = settings['agent_timeout']
 
-        # stop nginx
+        # stop agent
         stop_service = docker.bake("exec", "-i", container_name, "systemctl", "stop", service_name)
         logger.debug(stop_service)
         stop_service()
@@ -242,7 +175,7 @@ class TestContainerFlaki():
         agent_is_up = False
 
         while (tic_tac < max_timeout) and (agent_is_up == False):
-            # check if monit started nginx
+            # check if monit started jaeger agent
             time.sleep(1)
             check_service = docker.bake("exec", "-i", container_name, "systemctl", "status", service_name)
             logger.info(
@@ -270,7 +203,7 @@ class TestContainerFlaki():
         service_name = settings['service_name']
         max_timeout = settings['flaki_timeout']
 
-        # kill influxdb
+        # kill flaki
         stop_service = docker.bake("exec", "-i", container_name, "systemctl", "kill", service_name)
         logger.debug(stop_service)
         stop_service()
@@ -279,7 +212,7 @@ class TestContainerFlaki():
         flaki_is_up = False
 
         while (tic_tac < max_timeout) and (flaki_is_up == False):
-            # check if monit started influxdb
+            # check if monit started flaki
             time.sleep(1)
             check_service = docker.bake("exec", "-i", container_name, "systemctl", "status", service_name)
             logger.info(
@@ -307,7 +240,7 @@ class TestContainerFlaki():
         service_name = settings['jaeger_agent_name']
         max_timeout = settings['agent_timeout']
 
-        # kill nginx
+        # kill jaeger agent
         stop_service = docker.bake("exec", "-i", container_name, "systemctl", "kill", service_name)
         logger.debug(stop_service)
         stop_service()
@@ -316,7 +249,7 @@ class TestContainerFlaki():
         agent_is_up = False
 
         while (tic_tac < max_timeout) and (agent_is_up == False):
-            # check if monit started nginx
+            # check if monit started jaeger agent
             time.sleep(1)
             check_service = docker.bake("exec", "-i", container_name, "systemctl", "status", service_name)
             logger.info(
@@ -458,19 +391,4 @@ class TestContainerFlaki():
         status = re.search(restart_status, monit_restart)
         assert status is not None
 
-    def test_flaki_health_checks(self, settings):
-        """
-        Flaki service offers the possibility to do health checks on the services that work with it. This test launches the
-        health checks and sees that all services are OK:
-        :param settings: settings of the container, e.g. container name, service name, etc.
-        :return:
-        """
-        # HTTP request for health check
-        url = settings["http_addr"]
-        services = settings["health_check"]
-        conn = http.client.HTTPConnection(url)
-        conn.request("GET", "/health")
-        resp = json.load(conn.getresponse())
 
-        for service in services:
-            assert resp[service] == "OK"
